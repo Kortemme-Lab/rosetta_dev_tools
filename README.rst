@@ -27,5 +27,11 @@ You can install these tools by cloning this repository and running pip::
 
 This will install a handful of executable scripts in whichever ``bin/`` 
 directory pip is configured to use.  These scripts have pretty long names, so I 
-usually alias them to something shorter to make typing them more convenient.
+usually alias them to something shorter to make typing them more convenient::
+
+   alias rb='rdt_build debug'
+   alias rr='rdt_build release'
+   alias ru='rdt_unit_test'
+   alias rd='rdt_doxygen'
+   
    

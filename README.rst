@@ -56,7 +56,7 @@ To run a unit test suite, use the following command as a template::
 The first argument is the library that the unit test is part of, which usually 
 is ``protocols``.  The second argument is the name of the test suite to run 
 (i.e. the name of the class in your ``*.cxxtest.hh`` file).  You can also 
-specify a third argument run just one specific test case.
+specify a third argument to run just one specific test case.
 
 Once you've run a unit test using a command like the one above, you can use an 
 abbreviated version of that command to run the same test again::

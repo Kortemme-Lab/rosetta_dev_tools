@@ -54,8 +54,9 @@ To run a unit test suite, use the following command as a template::
    $ ru protocols MyUnitTest
 
 The first argument is the library that the unit test is part of, which usually 
-is ``protocols``.  The second argument is the name of the test suite to run.  
-You can also specify a third argument run just one specific test case.
+is ``protocols``.  The second argument is the name of the test suite to run 
+(i.e. the name of the class in your ``*.cxxtest.hh`` file).  You can also 
+specify a third argument run just one specific test case.
 
 Once you've run a unit test using a command like the one above, you can use an 
 abbreviated version of that command to run the same test again::
@@ -68,6 +69,11 @@ keystrokes as possible::
 
    $ ru protocols MyOtherUnitTest -s other
    $ ru other
+
+The unit test command can also create boilerplate unit test files.  Use the 
+``--new`` option along with the library, namespace, and test suite names::
+
+   $ ru --new protocols subdir/relative/to/protocols MyThirdUnitTest
 
 To generate doxygen documentation for whichever directory you're currently in, 
 run the following command::

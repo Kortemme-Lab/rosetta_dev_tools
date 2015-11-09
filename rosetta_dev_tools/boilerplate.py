@@ -209,8 +209,8 @@ def write_fwd_hh_file(name, namespace=None, dry_run=False):
 
 {cls} {name};
 
-typedef utility::pointer::owning_ptr<{name}> {name}OP;
-typedef utility::pointer::owning_ptr<{name} const> {name}COP;
+typedef utility::pointer::shared_ptr<{name}> {name}OP;
+typedef utility::pointer::shared_ptr<{name} const> {name}COP;
 
 {namespace_closer}
 

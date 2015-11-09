@@ -18,6 +18,7 @@ setuptools.setup(
         ],
         entry_points = {
             'console_scripts': [
+                'rdt_stub=rosetta_dev_tools.boilerplate:main',
                 'rdt_build=rosetta_dev_tools.build:main',
                 'rdt_unit_test=rosetta_dev_tools.unit_test:main',
                 'rdt_doxygen=rosetta_dev_tools.doxygen:main',

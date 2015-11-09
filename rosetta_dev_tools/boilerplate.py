@@ -44,6 +44,51 @@ Options:
 import sys, os, re, shutil
 from . import helpers
 
+def main():
+    import docopt
+    args = docopt.docopt(__doc__)
+    command = args['<type>']
+    name = args['<name>']
+    namespace = args['<namespace>']
+    parent = args['--parent']
+    dry_run = args['--dry-run']
+
+    try:
+        if command == 'mover':
+            write_fwd_hh_file(name, namespace, dry_run | MORE_FILES)
+            write_mover_hh_file(name, namespace, parent, dry_run | MORE_FILES)
+            write_mover_cc_file(name, namespace, dry_run | MORE_FILES)
+            write_mover_creator_file(name, namespace, dry_run | MORE_FILES)
+            write_cxxtest_hh_file(name + 'Test', namespace, dry_run)
+        elif command == 'class':
+            write_fwd_hh_file(name, namespace, dry_run | MORE_FILES)
+            write_hh_file(name, namespace, parent, dry_run | MORE_FILES)
+            write_cc_file(name, namespace, dry_run | MORE_FILES)
+            write_cxxtest_hh_file(name + 'Test', namespace, dry_run)
+        elif command == 'fwd.hh':
+            write_fwd_hh_file(name, namespace, dry_run)
+        elif command == 'hh':
+            write_hh_file(name, namespace, parent, dry_run)
+        elif command == 'cc':
+            write_cc_file(name, namespace, dry_run)
+        elif command == 'mover.hh':
+            write_mover_hh_file(name, namespace, parent, dry_run)
+        elif command == 'mover.cc':
+            write_mover_cc_file(name, namespace, dry_run)
+        elif command == 'creator.hh':
+            write_mover_creator_file(name, namespace, dry_run)
+        elif command == 'cxxtest.hh':
+            write_cxxtest_hh_file(name, namespace, dry_run)
+        else:
+            print("Unknown filetype: '{}'".format(command))
+
+    except KeyboardInterrupt:
+        pass
+
+    except helpers.FatalBuildError as error:
+        error.exit_gracefully()
+
+
 def get_namespace(namespace=None):
     if namespace is not None:
         return re.split('::|/', namespace)
@@ -421,44 +466,5 @@ public:
             name=name,
             namespace='/'.join(namespace),
         ))
-
-
-def main():
-    import docopt
-    args = docopt.docopt(__doc__)
-
-    command = args['<type>']
-    name = args['<name>']
-    namespace = args['<namespace>']
-    parent = args['--parent']
-    dry_run = args['--dry-run']
-
-    if command == 'mover':
-        write_fwd_hh_file(name, namespace, dry_run | MORE_FILES)
-        write_mover_hh_file(name, namespace, parent, dry_run | MORE_FILES)
-        write_mover_cc_file(name, namespace, dry_run | MORE_FILES)
-        write_mover_creator_file(name, namespace, dry_run | MORE_FILES)
-        write_cxxtest_hh_file(name + 'Test', namespace, dry_run)
-    elif command == 'class':
-        write_fwd_hh_file(name, namespace, dry_run | MORE_FILES)
-        write_hh_file(name, namespace, parent, dry_run | MORE_FILES)
-        write_cc_file(name, namespace, dry_run | MORE_FILES)
-        write_cxxtest_hh_file(name + 'Test', namespace, dry_run)
-    elif command == 'fwd.hh':
-        write_fwd_hh_file(name, namespace, dry_run)
-    elif command == 'hh':
-        write_hh_file(name, namespace, parent, dry_run)
-    elif command == 'cc':
-        write_cc_file(name, namespace, dry_run)
-    elif command == 'mover.hh':
-        write_mover_hh_file(name, namespace, parent, dry_run)
-    elif command == 'mover.cc':
-        write_mover_cc_file(name, namespace, dry_run)
-    elif command == 'creator.hh':
-        write_mover_creator_file(name, namespace, dry_run)
-    elif command == 'cxxtest.hh':
-        write_cxxtest_hh_file(name, namespace, dry_run)
-    else:
-        print("Unknown filetype: '{}'".format(command))
 
 

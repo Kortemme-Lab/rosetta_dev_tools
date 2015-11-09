@@ -21,10 +21,6 @@ Options:
         Run the unit test in the debugger.  Once the debugger starts, enter 'r' 
         to start running the test.
 
-    -u, --update
-        Before compiling the unit test, run CMake to account for source files 
-        that have been added or removed.
-
     -v, --verbose
         Output each command line that gets run, in case something needs to be 
         debugged.
@@ -51,7 +47,6 @@ def main():
         run_unit_test(
                 library, suite, test,
                 gdb=args['--gdb'],
-                update=args['--update'],
                 verbose=args['--verbose'],
         )
     except helpers.FatalBuildError as error:
@@ -97,14 +92,13 @@ def pick_unit_test(library, suite, test=None, alias=None, save_as=None):
 
     return library, suite, test
 
-def run_unit_test(library, suite, test=None, gdb=False, update=False, verbose=False):
+def run_unit_test(library, suite, test=None, gdb=False, verbose=False):
     # Compile the unit test.
 
     from .build import build_rosetta
 
     error_code = build_rosetta(
             'debug', library + '.test',
-            update=update,
             verbose=verbose,
     )
     if error_code:
@@ -119,7 +113,12 @@ def run_unit_test(library, suite, test=None, gdb=False, update=False, verbose=Fa
     if gdb:
         unit_test_cmd += 'gdb', '--args'
     
-    unit_test_cmd += './{}.test'.format(library), suite
+    # The "-mute all" argument is actually critically important because it 
+    # covers up a bug in core_init().  If only one argument is passed the unit 
+    # test script, core_init() tries to add "-mute all" and ends up failing, I 
+    # think because it gets $0 wrong.
+
+    unit_test_cmd += './{}.test'.format(library), suite, '-mute', 'all'
 
     if test is not None:
         unit_test_cmd += test,

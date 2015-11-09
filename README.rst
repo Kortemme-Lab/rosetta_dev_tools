@@ -30,6 +30,7 @@ This will install a handful of executable scripts in whichever ``bin/``
 directory pip is configured to use.  These scripts have pretty long names, so I 
 usually alias them to something shorter to make typing them more convenient::
 
+   alias rk='rdt_stub'
    alias rb='rdt_build debug'
    alias rr='rdt_build release'
    alias ru='rdt_unit_test'
@@ -37,6 +38,24 @@ usually alias them to something shorter to make typing them more convenient::
 
 Usage
 =====
+To create all the boilerplate files for a new mover (including header, forward 
+header, source, mover creator, and unit test files), run the following 
+command::
+
+   $ rk mover MyMover protocols::moves
+
+The first argument specifies what kind of file(s) to make, the second argument 
+specifies the name of the new class, and the third argument specifies the 
+namespace that that class will live in.  If you don't specify a namespace, one 
+will be automatically inferred from the current working directory.  So the 
+above command could be abbreviated like so::
+
+   $ cd $rosetta/source/src/protocols/moves
+   $ rk mover MyMover
+
+This command also has a convenient ``--dry-run`` option you can use to look at 
+the stub files being generated before they are actually written to disk.
+
 To build rosetta in debug mode, just run the following alias from anywhere in 
 your checkout of rosetta::
 
@@ -70,11 +89,6 @@ keystrokes as possible::
 
    $ ru protocols MyOtherUnitTest -s other
    $ ru other
-
-The unit test command can also create boilerplate unit test files.  Use the 
-``--new`` option along with the library, namespace, and test suite names::
-
-   $ ru --new protocols subdir/relative/to/protocols MyThirdUnitTest
 
 To generate doxygen documentation for whichever directory you're currently in, 
 run the following command::

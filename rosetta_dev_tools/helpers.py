@@ -73,15 +73,3 @@ class RosettaNotFound (FatalBuildError):
             Presently, only installations that are stored in a git repository 
             can be detected."""
        
-class MissingCMakeFiles (FatalBuildError):
-    exit_status = 2
-    exit_message = """\
-            Could not find '{0}'.  This might indicate that this script was 
-            unable to properly locate your Rosetta installation, or it may 
-            indicate that your installation has somehow been corrupted. """
-
-    def __init__(self, *sub_paths):
-        path = os.path.join('source', 'cmake', *sub_paths)
-        FatalBuildError.__init__(self, path)
-
-

@@ -36,8 +36,8 @@ usually alias them to something shorter to make typing them more convenient::
    alias ru='rdt_unit_test'
    alias rd='rdt_doxygen'
 
-Usage
-=====
+Filling in boilerplate
+======================
 To create all the boilerplate files for a new mover (including header, forward 
 header, source, mover creator, and unit test files), run the following 
 command::
@@ -56,6 +56,8 @@ above command could be abbreviated like so::
 This command also has a convenient ``--dry-run`` option you can use to look at 
 the stub files being generated before they are actually written to disk.
 
+Compiling rosetta
+=================
 To build rosetta in debug mode, just run the following alias from anywhere in 
 your checkout of rosetta::
 
@@ -68,6 +70,8 @@ To build in release mode, run the following alias instead::
 Both of these commands also have options to build from scratch by deleting all 
 the binaries built by previous invocations.
 
+Running unit tests
+==================
 To run a unit test suite, use the following command as a template::
 
    $ ru protocols MyUnitTest
@@ -90,6 +94,8 @@ keystrokes as possible::
    $ ru protocols MyOtherUnitTest -s other
    $ ru other
 
+Writing documentation
+=====================
 To generate doxygen documentation for whichever directory you're currently in, 
 run the following command::
 

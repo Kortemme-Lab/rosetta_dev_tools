@@ -118,7 +118,8 @@ def run_unit_test(library, suite, test=None, gdb=False, verbose=False):
     # test script, core_init() tries to add "-mute all" and ends up failing, I 
     # think because it gets $0 wrong.
 
-    unit_test_cmd += './{}.test'.format(library), suite, '-mute', 'all'
+    unit_test_cmd += './{}.test'.format(library), suite,
+    unit_test_cmd += '-unmute' if verbose else '-mute', 'all'
 
     if test is not None:
         unit_test_cmd += test,

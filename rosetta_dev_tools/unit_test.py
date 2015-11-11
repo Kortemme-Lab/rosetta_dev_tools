@@ -119,10 +119,8 @@ def run_unit_test(library, suite, test=None, gdb=False, verbose=False):
     # think because it gets $0 wrong.
 
     unit_test_cmd += './{}.test'.format(library), suite,
+    if test is not None: unit_test_cmd += test,
     unit_test_cmd += '-unmute' if verbose else '-mute', 'all'
-
-    if test is not None:
-        unit_test_cmd += test,
 
     helpers.shell_command(
             unit_test_dir, unit_test_cmd, check=False, verbose=verbose)

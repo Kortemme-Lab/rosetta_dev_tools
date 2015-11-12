@@ -21,20 +21,46 @@ properly, but information is available on the Kortemme lab wiki page.
 
 Installation
 ============
-You can install these tools by cloning this repository and running pip::
+You can install these tools by cloning this repository and running ``pip``.  
+Note that these tools depend on ``python3``, so the installation won't work if 
+you use a ``pip`` associated with ``python2``::
 
    $ git clone git@github.com:Kortemme-Lab/rosetta_dev_tools.git
-   $ pip install rosetta_dev_tools
+   $ pip3 install rosetta_dev_tools
 
 This will install a handful of executable scripts in whichever ``bin/`` 
-directory pip is configured to use.  These scripts have pretty long names, so I 
-usually alias them to something shorter to make typing them more convenient::
+directory ``pip`` is configured to use.  These scripts have pretty long names, 
+so I usually alias them to something shorter to make typing them more 
+convenient::
 
    alias rk='rdt_stub'
    alias rb='rdt_build debug'
    alias rr='rdt_build release'
    alias ru='rdt_unit_test'
    alias rd='rdt_doxygen'
+
+If you want to install these tools on the QB3 cluster, you'll have to take a 
+couple extra steps.  First, you have to be on an interactive node (e.g.  
+``iqint``) or git clone won't work.  Second, the cluster doesn't have ``pip`` 
+installed, so you'll have to run ``setup.py`` manually.  Third, the cluster 
+doesn't make ``python3`` available by default, so you have to explicitly enable 
+it using the ``scl enable python33`` command::
+
+   $ ssh iqint
+   $ git clone git@github.com:Kortemme-Lab/rosetta_dev_tools.git
+   $ cd rosetta_dev_tools
+   $ scl enable python33 'python setup.py build'
+   $ scl enable python33 'python setup.py install --user'
+
+You'll also have to use the ``scl enable python33`` command every time you want 
+to use any of these tools, so it's easiest to simply wrap them in functions::
+
+   function rb {} (
+       scl enable python33 'rdt_build debug $*'
+   }
+   function rr {} (
+       scl enable python33 'rdt_build release $*'
+   }
 
 Filling in boilerplate
 ======================
@@ -67,8 +93,13 @@ To build in release mode, run the following alias instead::
 
    $ rr
 
-Both of these commands also have options to build from scratch by deleting all 
-the binaries built by previous invocations.
+You may run into a problem where these commands complain that they can't find 
+``ninja-build``.  This is because I developed these tools on Fedora, and on 
+Fedora the name ``ninja`` was already taken by another program, so the ninja 
+build system was named ``ninja-build`` instead.  On most other systems ninja is 
+simply named ``ninja``.  The easiest way to deal with this problem is simply to 
+make a symlink called ``ninja-build`` that points to ``ninja`` and to put it 
+somewhere on your ``$PATH``.
 
 Running unit tests
 ==================

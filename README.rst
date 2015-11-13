@@ -103,7 +103,7 @@ somewhere on your ``$PATH``.
 
 Running unit tests
 ==================
-To run a unit test suite, use the following command as a template::
+To compile and run a unit test suite, use the following command as a template::
 
    $ ru protocols MyUnitTest
 

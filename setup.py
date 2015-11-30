@@ -15,7 +15,7 @@ setuptools.setup(
         ],
         install_requires=[
             'docopt==0.6.2',
-            'nonstdlib>=1.4',
+            'nonstdlib>=1.5',
         ],
         entry_points = {
             'console_scripts': [

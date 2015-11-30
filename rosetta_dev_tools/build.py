@@ -24,7 +24,7 @@ Options:
         debugged.
 """
 
-import sys, os
+import sys, os, nonstdlib
 from . import helpers
 
 def main():
@@ -48,6 +48,8 @@ def main():
         error.exit_gracefully()
 
 def build_rosetta(build=None, project=None, clean=False, nprocs=None, verbose=False):
+    import subprocess
+
     # Initialize the settings and paths that we'll use for this build.  This 
     # involves setting some default values and making sure some paths exist.
 
@@ -65,29 +67,55 @@ def build_rosetta(build=None, project=None, clean=False, nprocs=None, verbose=Fa
     if clean:
         wipe_old_build(build_path)
 
+    # Look for a program that can build rosetta, e.g. either ninja or cmake.  
+    # Prefer ninja, but use cmake if ninja isn't installed.  Then store 
+    # whatever information is necessary for the rest of this program to be 
+    # agnostic to the choice of build tool.
+
+    with open(os.devnull) as devnull:
+        build_tool_candidates = 'ninja', 'ninja-build', 'make',
+        build_tool_candidates = 'foo',
+        build_tools = subprocess.check_output(
+                'which ' + ' '.join(build_tool_candidates) + ' || true',
+                shell=True, stderr=devnull).decode().split()
+
+        if not build_tools:
+            raise NoBuildToolFound(build_tool_candidates)
+
+        build_tool = build_tools[0]
+
+        if 'ninja' in os.path.basename(build_tool):
+            cmake_generator = 'Ninja'
+            cmake_output = os.path.join(build_path, 'build.ninja')
+        elif 'make' in os.path.basename(build_tool):
+            cmake_generator = 'Unix Makefiles'
+            cmake_output = os.path.join(build_path, 'Makefile')
+        else:
+            raise AssertionError("Unexpected build tool: " + build_tool)
+
     # Use cmake to generate the ninja build files, if necessary.  This will be 
     # necessary either if the ninja configuration doesn't exist or if the 
     # *.settings file were modified more recently than the ninja build script.
 
     make_project = 'python2', 'make_project.py', 'all'
-    make_ninja = 'cmake', '-G', 'Ninja', '-Wno-dev'
+    make_build_tool = 'cmake', '-G', cmake_generator, '-Wno-dev'
 
-    if is_ninja_config_stale(build_path):
-        helpers.shell_command(cmake_path, make_project, verbose=verbose)
-        helpers.shell_command(build_path, make_ninja, verbose=verbose)
+    if is_cmake_output_stale(cmake_output):
+        helpers.shell_command(cmake_path, make_project, one_line=True, verbose=verbose)
+        helpers.shell_command(build_path, make_build_tool, one_line=True, verbose=verbose)
 
     # Execute the ninja command to build rosetta.
 
-    ninja_build = 'ninja-build',
+    build_command = build_tool,
     if project is not None:
-        ninja_build += project,
+        build_command += project,
         if not project.endswith('.test'):
-            ninja_build += project + '_symlink',
+            build_command += project + '_symlink',
     if nprocs is not None:
-        ninja_build += '-j', nprocs
+        build_command += '-j', nprocs
 
     return helpers.shell_command(
-            build_path, ninja_build, check=False, verbose=verbose)
+            build_path, build_command, check=False, verbose=verbose)
 
 def wipe_old_build(build_path):
     for subpath in os.listdir(build_path):
@@ -101,32 +129,49 @@ def wipe_old_build(build_path):
         else:
             os.remove(path)
 
-def is_ninja_config_stale(build_path):
+def is_cmake_output_stale(cmake_output):
     from glob import glob
 
-    rosetta_path = os.path.dirname(os.path.dirname(build_path))
-    ninja_config_path = os.path.join(build_path, 'build.ninja')
+    # If the CMake output file doesn't exist, then we definitely need to run 
+    # cmake to generate it.
+
+    if not os.path.exists(cmake_output):
+        return True
+
+    # The CMake inputs are the *.settings files in src/ and test/.  So if any 
+    # of those have been modified more recently than the CMake output file, 
+    # then we need to re-run cmake.
+
+    most_recent_cmake = os.path.getmtime(cmake_output)
+    most_recent_modification = 0
+    rosetta_path = os.path.abspath(os.path.join(cmake_output, '../../..'))
     src_settings_glob = os.path.join(rosetta_path, 'src', '*.settings')
     test_settings_glob = os.path.join(rosetta_path, 'test', '*.settings')
 
-    if not os.path.exists(ninja_config_path):
-        return True
-
-    most_recent_build = os.path.getmtime(ninja_config_path)
-    most_recent_modification = 0
     for path in glob(src_settings_glob) + glob(test_settings_glob):
         most_recent_modification = max(
                 os.path.getmtime(path), most_recent_modification)
 
-    return most_recent_modification > most_recent_build
+    return most_recent_modification > most_recent_cmake
 
 def require_cmake_path(cmake_path, *sub_paths):
     full_path = os.path.join(cmake_path, *sub_paths)
     if not os.path.exists(full_path):
         raise MissingCMakeFiles(*sub_paths)
 
-class MissingCMakeFiles (helpers.FatalBuildError):
+class NoBuildToolFound (helpers.FatalBuildError):
     exit_status = 2
+    exit_message = """\
+            Neither 'ninja' nor 'make' is installed.  Install either of these 
+            programs and try again.  For what it's worth, I would recommend 
+            'ninja'.  It's faster and I think it has nicer output. """
+
+    def __init__(self, candidates):
+        super().__init__()
+
+
+class MissingCMakeFiles (helpers.FatalBuildError):
+    exit_status = 3
     exit_message = """\
             Could not find '{0}'.  This might indicate that this script was 
             unable to properly locate your Rosetta installation, or it may 
@@ -134,6 +179,6 @@ class MissingCMakeFiles (helpers.FatalBuildError):
 
     def __init__(self, *sub_paths):
         path = os.path.join('source', 'cmake', *sub_paths)
-        FatalBuildError.__init__(self, path)
+        super().__init__(path)
 
 

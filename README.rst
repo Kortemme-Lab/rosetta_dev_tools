@@ -26,7 +26,7 @@ Note that these tools depend on ``python3``, so the installation won't work if
 you use a ``pip`` associated with ``python2``::
 
    $ git clone git@github.com:Kortemme-Lab/rosetta_dev_tools.git
-   $ pip3 install rosetta_dev_tools
+   $ pip3 install ./rosetta_dev_tools
 
 This will install a handful of executable scripts in whichever ``bin/`` 
 directory ``pip`` is configured to use.  These scripts have pretty long names, 

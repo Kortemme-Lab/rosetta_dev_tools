@@ -69,13 +69,13 @@ To create all the boilerplate files for a new mover (including header, forward
 header, source, mover creator, and unit test files), run the following 
 command::
 
-   $ rk mover MyMover protocols::moves
+   $ rk mover protocols::moves::MyMover
 
-The first argument specifies what kind of file(s) to make, the second argument 
-specifies the name of the new class, and the third argument specifies the 
-namespace that that class will live in.  If you don't specify a namespace, one 
-will be automatically inferred from the current working directory.  So the 
-above command could be abbreviated like so::
+The first argument specifies what kind of file(s) to make and the second 
+argument specifies the name of the new class.  The second argument doesn't have 
+to be a fully qualified name (i.e. it doesn't have to include a namespace).  If 
+you don't specify a namespace, one will be automatically inferred from the 
+current working directory.  So the above command could be abbreviated like so::
 
    $ cd $rosetta/source/src/protocols/moves
    $ rk mover MyMover

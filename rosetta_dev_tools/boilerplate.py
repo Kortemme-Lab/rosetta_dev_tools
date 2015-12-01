@@ -4,7 +4,7 @@
 Write stub source code files with most of the boilerplate filled in.
 
 Usage:
-    rdt_stub <type> <name> [<namespace>] [options]
+    rdt_stub <type> <name> [options]
 
 Arguments:
     <type>
@@ -26,11 +26,9 @@ Arguments:
             name and namespace.
 
     <name>
-        The name of the class to write boilerplate for.
-
-    <namespace>
-        The namespace of the class to write boilerplate for.  If not specified, 
-        this will be inferred from the current working directory.
+        The name of the class to write boilerplate for.  If the name doesn't 
+        include a namespace, the namespace will be assumed to be the current 
+        working directory.
 
 Options:
     -d, --dry-run
@@ -49,36 +47,35 @@ def main():
     args = docopt.docopt(__doc__)
     command = args['<type>']
     name = args['<name>']
-    namespace = args['<namespace>']
     parent = args['--parent']
     dry_run = args['--dry-run']
 
     try:
         if command == 'mover':
-            write_fwd_hh_file(name, namespace, dry_run | MORE_FILES)
-            write_mover_hh_file(name, namespace, parent, dry_run | MORE_FILES)
-            write_mover_cc_file(name, namespace, dry_run | MORE_FILES)
-            write_mover_creator_file(name, namespace, dry_run | MORE_FILES)
-            write_cxxtest_hh_file(name + 'Test', namespace, dry_run)
+            write_fwd_hh_file(name, dry_run | MORE_FILES)
+            write_mover_hh_file(name, parent, dry_run | MORE_FILES)
+            write_mover_cc_file(name, dry_run | MORE_FILES)
+            write_mover_creator_file(name, dry_run | MORE_FILES)
+            write_cxxtest_hh_file(name + 'Test', dry_run)
         elif command == 'class':
-            write_fwd_hh_file(name, namespace, dry_run | MORE_FILES)
-            write_hh_file(name, namespace, parent, dry_run | MORE_FILES)
-            write_cc_file(name, namespace, dry_run | MORE_FILES)
-            write_cxxtest_hh_file(name + 'Test', namespace, dry_run)
+            write_fwd_hh_file(name, dry_run | MORE_FILES)
+            write_hh_file(name, parent, dry_run | MORE_FILES)
+            write_cc_file(name, dry_run | MORE_FILES)
+            write_cxxtest_hh_file(name + 'Test', dry_run)
         elif command == 'fwd.hh':
-            write_fwd_hh_file(name, namespace, dry_run)
+            write_fwd_hh_file(name, dry_run)
         elif command == 'hh':
-            write_hh_file(name, namespace, parent, dry_run)
+            write_hh_file(name, parent, dry_run)
         elif command == 'cc':
-            write_cc_file(name, namespace, dry_run)
+            write_cc_file(name, dry_run)
         elif command == 'mover.hh':
-            write_mover_hh_file(name, namespace, parent, dry_run)
+            write_mover_hh_file(name, parent, dry_run)
         elif command == 'mover.cc':
-            write_mover_cc_file(name, namespace, dry_run)
+            write_mover_cc_file(name, dry_run)
         elif command == 'creator.hh':
-            write_mover_creator_file(name, namespace, dry_run)
+            write_mover_creator_file(name, dry_run)
         elif command == 'cxxtest.hh':
-            write_cxxtest_hh_file(name, namespace, dry_run)
+            write_cxxtest_hh_file(name, dry_run)
         else:
             print("Unknown filetype: '{}'".format(command))
 
@@ -89,14 +86,15 @@ def main():
         error.exit_gracefully()
 
 
-def get_namespace(namespace=None):
-    if namespace is not None:
-        return re.split('::|/', namespace)
+def get_fully_qualified_name(name):
+    if '::' in name:
+        names = name.split('::')
+        return names[-1], names[:-1]
     else:
         rosetta_path = os.path.realpath(helpers.find_rosetta_installation())
         source_path = os.path.join(rosetta_path, 'source', 'src')
         current_path = os.path.realpath('.')[len(source_path):]
-        return [x for x in current_path.split(os.path.sep) if x != '']
+        return name, [x for x in current_path.split(os.path.sep) if x != '']
 
 def get_source_dir(namespace):
     return os.path.join(
@@ -197,8 +195,8 @@ def write_file(directory, file_name, content, dry_run=False):
 DRY_RUN = 0x01
 MORE_FILES = 0x02
 
-def write_fwd_hh_file(name, namespace=None, dry_run=False):
-    namespace = get_namespace(namespace)
+def write_fwd_hh_file(name, dry_run=False):
+    name, namespace = get_fully_qualified_name(name)
     directory = get_source_dir(namespace)
     write_file(directory, name + '.fwd.hh', '''\
 {include_guard}
@@ -219,8 +217,8 @@ typedef utility::pointer::shared_ptr<{name} const> {name}COP;
         **get_common_fields(name, namespace, 'FWD_HH')),
     dry_run)
 
-def write_hh_file(name, namespace=None, parent=None, dry_run=False):
-    namespace = get_namespace(namespace)
+def write_hh_file(name, parent=None, dry_run=False):
+    name, namespace = get_fully_qualified_name(name)
     directory = get_source_dir(namespace)
     write_file(directory, name + '.hh', '''\
 {include_guard}
@@ -250,8 +248,8 @@ public:
         **get_common_fields(name, namespace)),
     dry_run)
 
-def write_cc_file(name, namespace=None, dry_run=False):
-    namespace = get_namespace(namespace)
+def write_cc_file(name, dry_run=False):
+    name, namespace = get_fully_qualified_name(name)
     directory = get_source_dir(namespace)
     write_file(directory, name + '.cc', '''\
 {license}
@@ -278,8 +276,8 @@ using core::Real;
         **get_common_fields(name, namespace)),
     dry_run)
 
-def write_mover_hh_file(name, namespace=None, parent=None, dry_run=False):
-    namespace = get_namespace(namespace)
+def write_mover_hh_file(name, parent=None, dry_run=False):
+    name, namespace = get_fully_qualified_name(name)
     directory = get_source_dir(namespace)
     write_file(directory, name + '.hh', '''\
 {include_guard}
@@ -330,8 +328,8 @@ void apply(core::pose::Pose & pose);
         **get_common_fields(name, namespace)),
     dry_run)
 
-def write_mover_cc_file(name, namespace=None, dry_run=False):
-    namespace = get_namespace(namespace)
+def write_mover_cc_file(name, dry_run=False):
+    name, namespace = get_fully_qualified_name(name)
     directory = get_source_dir(namespace)
     write_file(directory, name + '.cc', '''\
 {license}
@@ -386,8 +384,8 @@ void {name}::apply(core::pose::Pose & pose) {{
         **get_common_fields(name, namespace)),
     dry_run)
 
-def write_mover_creator_file(name, namespace=None, dry_run=False):
-    namespace = get_namespace(namespace)
+def write_mover_creator_file(name, dry_run=False):
+    name, namespace = get_fully_qualified_name(name)
     directory = get_source_dir(namespace)
     write_file(directory, name + 'Creator.hh', '''\
 {include_guard}
@@ -409,8 +407,8 @@ public:
         **get_common_fields(name, namespace, 'CREATOR_HH')),
     dry_run)
 
-def write_cxxtest_hh_file(name, namespace=None, dry_run=False):
-    namespace = get_namespace(namespace)
+def write_cxxtest_hh_file(name, dry_run=False):
+    name, namespace = get_fully_qualified_name(name)
     directory = get_test_dir(namespace)
     write_file(directory, name + '.cxxtest.hh', '''\
 {include_guard}

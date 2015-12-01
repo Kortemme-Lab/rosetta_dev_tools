@@ -144,8 +144,8 @@ def is_cmake_output_stale(cmake_output):
     most_recent_cmake = os.path.getmtime(cmake_output)
     most_recent_modification = 0
     rosetta_path = os.path.abspath(os.path.join(cmake_output, '../../..'))
-    src_settings_glob = os.path.join(rosetta_path, 'src', '*.settings')
-    test_settings_glob = os.path.join(rosetta_path, 'test', '*.settings')
+    src_settings_glob = os.path.join(rosetta_path, 'src', '*.settings*')
+    test_settings_glob = os.path.join(rosetta_path, 'test', '*.settings*')
 
     for path in glob(src_settings_glob) + glob(test_settings_glob):
         most_recent_modification = max(

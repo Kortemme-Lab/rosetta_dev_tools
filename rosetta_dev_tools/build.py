@@ -74,7 +74,6 @@ def build_rosetta(build=None, project=None, clean=False, nprocs=None, verbose=Fa
 
     with open(os.devnull) as devnull:
         build_tool_candidates = 'ninja', 'ninja-build', 'make',
-        build_tool_candidates = 'foo',
         build_tools = subprocess.check_output(
                 'which ' + ' '.join(build_tool_candidates) + ' || true',
                 shell=True, stderr=devnull).decode().split()

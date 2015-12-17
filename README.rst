@@ -65,11 +65,16 @@ For example, put these lines in ``~/.bashrc``::
 
 Filling in boilerplate
 ======================
-To create all the boilerplate files for a new mover (including header, forward 
-header, source, mover creator, and unit test files), run the following 
+To create all the boilerplate files for a new mover, run the following 
 command::
 
    $ rk mover protocols::moves::MyMover
+
+This command will create new ``*.fwd.hh``, ``*.hh``, ``*Creator.hh``, ``*.cc``, 
+and ``*.cxxtest.hh`` files.  It will also add the mover to the relevant 
+``*.src.settings`` and ``*.test.settings`` files, and it will register the 
+mover in ``init.MoverCreators.ihh`` and ``init.MoverRegistrators.ihh``.  When 
+the command finishes, your new class will be completely ready to compile.
 
 The first argument specifies what kind of file(s) to make and the second 
 argument specifies the name of the new class.  The second argument doesn't have 
@@ -131,7 +136,7 @@ run the following command::
    $ rd
 
 This will generate documentation and automatically present it to you in a new 
-firefox window.
+``firefox`` window.
 
 
 

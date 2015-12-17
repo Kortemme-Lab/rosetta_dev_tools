@@ -39,7 +39,7 @@ Options:
         needed if a header file will be written.
 """
 
-import sys, os, re, shutil
+import sys, os, re, shutil, glob
 from . import helpers
 
 def main():
@@ -56,11 +56,17 @@ def main():
             write_mover_hh_file(name, parent, dry_run | MORE_FILES)
             write_mover_cc_file(name, dry_run | MORE_FILES)
             write_mover_creator_file(name, dry_run | MORE_FILES)
+            write_mover_creator_ihh_line(name, dry_run | MORE_FILES)
+            write_mover_registrator_ihh_line(name, dry_run | MORE_FILES)
+            write_src_settings_line(name, dry_run | MORE_FILES)
+            write_test_settings_line(name, dry_run | MORE_FILES)
             write_cxxtest_hh_file(name + 'Test', dry_run)
         elif command == 'class':
             write_fwd_hh_file(name, dry_run | MORE_FILES)
             write_hh_file(name, parent, dry_run | MORE_FILES)
             write_cc_file(name, dry_run | MORE_FILES)
+            write_src_settings_line(name, dry_run | MORE_FILES)
+            write_test_settings_line(name, dry_run | MORE_FILES)
             write_cxxtest_hh_file(name + 'Test', dry_run)
         elif command == 'fwd.hh':
             write_fwd_hh_file(name, dry_run)
@@ -74,6 +80,14 @@ def main():
             write_mover_cc_file(name, dry_run)
         elif command == 'creator.hh':
             write_mover_creator_file(name, dry_run)
+        elif command == 'creator.ihh':
+            write_mover_creator_ihh_line(name, dry_run)
+        elif command == 'registrator.ihh':
+            write_mover_registrator_ihh_line(name, dry_run)
+        elif command == 'src.settings':
+            write_src_settings_line(name, dry_run)
+        elif command == 'test.settings':
+            write_test_settings_line(name, dry_run)
         elif command == 'cxxtest.hh':
             write_cxxtest_hh_file(name, dry_run)
         else:
@@ -101,10 +115,25 @@ def get_source_dir(namespace):
             helpers.find_rosetta_installation(),
             'source', 'src', *namespace)
 
+def get_source_path(name, namespace, extension):
+    return os.path.join(
+            get_source_dir(namespace),
+            name + extension)
+
 def get_test_dir(namespace):
     return os.path.join(
             helpers.find_rosetta_installation(),
             'source', 'test', *namespace)
+
+def get_test_path(name, namespace, extension):
+    return os.path.join(
+            get_test_dir(namespace),
+            name + extension)
+
+def get_protocols_init_dir():
+    return os.path.join(
+            helpers.find_rosetta_installation(),
+            'source', 'src', 'protocols', 'init')
 
 def get_license():
     return '''\
@@ -145,6 +174,7 @@ def get_common_fields(name, namespace, include_guard_ext='HH'):
     return dict(
         name=name,
         namespace='/'.join(namespace),
+        namespace_cpp='::'.join(namespace),
         license=get_license(),
         include_guard=get_include_guard(name, namespace, include_guard_ext),
         namespace_opener=get_namespace_opener(namespace),
@@ -154,8 +184,13 @@ def get_common_fields(name, namespace, include_guard_ext='HH'):
     )
 
 
-def write_file(directory, file_name, content, dry_run=False):
-    file_path = os.path.join(directory, file_name)
+DRY_RUN = 0x01
+MORE_FILES = 0x02
+
+def write_file(file_path, content, summary=None, dry_run=False):
+    from nonstdlib import print_color
+
+    directory = os.path.dirname(file_path)
     rel_directory = os.path.relpath(directory, os.getcwd())
     rel_file_path = os.path.relpath(file_path, os.getcwd())
 
@@ -163,9 +198,11 @@ def write_file(directory, file_name, content, dry_run=False):
 
     if dry_run & DRY_RUN:
         try:
-            from nonstdlib import print_color
             print_color(rel_file_path, 'magenta', 'bold')
-            print(content)
+            if not summary:
+                print(content)
+            else:
+                print('...\n{}...'.format(summary))
             if dry_run & MORE_FILES:
                 input("Next file? ")
         except KeyboardInterrupt:
@@ -192,13 +229,134 @@ def write_file(directory, file_name, content, dry_run=False):
     with open(file_path, 'w') as file:
         file.write(content)
 
-DRY_RUN = 0x01
-MORE_FILES = 0x02
+def insert_line_into_file(path, line, dry_run=False):
+
+    # Read the file.  If the line is already in the file, stop right away.
+
+    with open(path) as file:
+        lines = file.readlines()
+
+    i = insert_alphabetically(line + '\n', lines)
+
+    # Write the file back to disk with the new line included.
+
+    content = ''.join(lines)
+    summary = ''.join(['...\n'] + lines[i-1:i+2] + ['...\n'])
+    write_file(path, content, summary, dry_run)
+
+def insert_name_into_settings(path, name, namespace, dry_run):
+    # Parse the settings file into a set of blocks, where each block represents 
+    # one namespace and all of its files.  The blocks are stored in a ordered 
+    # dictionary, where the key is the name of the block's namespace.
+
+    with open(path) as file:
+        lines = file.readlines()
+
+    class Block:
+
+        def __init__(self):
+            self.lines = []
+
+        def __repr__(self):
+            if self.lines:
+                return 'Block({})'.format(self.lines[0].strip())
+            else:
+                return 'Block()'
+
+        def __str__(self):
+            return ''.join(self.lines)
+
+        def __bool__(self):
+            return bool(self.lines)
+
+        def __eq__(self, other):
+            return str(self) == str(other)
+
+        def __lt__(self, other):
+            return str(self) < str(other)
+
+
+    blocks = [Block()]
+    relevant_block = None
+    begin_block_pattern = re.compile(r'''\s*['"](.+)['"]\s*:\s*\[''')
+    end_block_pattern = re.compile(r'''\s*\],''')
+
+    for line in lines:
+        begin_block = begin_block_pattern.match(line)
+        end_block = end_block_pattern.match(line)
+
+        if begin_block:
+            if blocks[-1]:
+                blocks.append(Block())
+            if '/'.join(namespace) == begin_block.group(1):
+                relevant_block = blocks[-1]
+
+        blocks[-1].lines.append(line)
+
+        if end_block:
+            if blocks[-1]:
+                blocks.append(Block())
+
+    # If the namespace we're trying to add is already present in the file, 
+    # insert the new name into the existing block.
+    
+    if relevant_block:
+        line = '\t\t"{name}",\n'.format(name=name)
+        insert_alphabetically(line, relevant_block.lines)
+
+    # Otherwise, add a completely new block to the file.
+
+    else:
+        fields = get_common_fields(name, namespace)
+        relevant_block = Block()
+        relevant_block.lines = [
+                '	"{namespace}": [\n'.format(**fields),
+                '		"{name}",\n'.format(**fields),
+                '	],\n',
+        ]
+        insert_alphabetically(relevant_block, blocks)
+
+    # Write the file.
+
+    content, summary = ''.join(str(x) for x in blocks), str(relevant_block)
+    write_file(path, content, summary, dry_run)
+
+def insert_alphabetically(line, lines):
+    if line in lines:
+        return
+
+    # Make a separate list for the lines that we want to insert our line 
+    # alphabetically into.  Then insert our line into that list and sort it to 
+    # figure our where our line ends up.
+
+    sorted_lines = list(sorted(lines + [line]))
+    sorted_index = sorted_lines.index(line)
+
+    # Find the closest line to our new line in the sorted list, then insert our 
+    # line into the list of all the lines in file right next to that closest 
+    # line.  The case where our line ends up as the last element in the sorted 
+    # list has to be handled specially.
+
+    if sorted_index + 1 == len(sorted_lines):
+        closest_line = sorted_lines[-2]
+        insert_offset = 1
+    else:
+        closest_line = sorted_lines[sorted_index + 1]
+        insert_offset = 0
+
+    insert_index = lines.index(closest_line) + insert_offset
+    lines.insert(insert_index, line)
+
+    # Return the index of the inserted line, in case the caller is interested 
+    # in where our line ended up.
+
+    return insert_index
+
 
 def write_fwd_hh_file(name, dry_run=False):
     name, namespace = get_fully_qualified_name(name)
-    directory = get_source_dir(namespace)
-    write_file(directory, name + '.fwd.hh', '''\
+    path = get_source_path(name, namespace, '.fwd.hh')
+    write_file(path, '''\
 {include_guard}
 
 #include <utility/pointer/owning_ptr.hh>
@@ -215,12 +373,12 @@ typedef utility::pointer::shared_ptr<{name} const> {name}COP;
 #endif
 '''.format(
         **get_common_fields(name, namespace, 'FWD_HH')),
-    dry_run)
+    dry_run=dry_run)
 
 def write_hh_file(name, parent=None, dry_run=False):
     name, namespace = get_fully_qualified_name(name)
-    directory = get_source_dir(namespace)
-    write_file(directory, name + '.hh', '''\
+    path = get_source_path(name, namespace, '.hh')
+    write_file(path, '''\
 {include_guard}
 
 // Unit headers
@@ -246,21 +404,22 @@ public:
 '''.format(
         inheritance=' : public ' + parent if parent else '',
         **get_common_fields(name, namespace)),
-    dry_run)
+    dry_run=dry_run)
 
 def write_cc_file(name, dry_run=False):
     name, namespace = get_fully_qualified_name(name)
-    directory = get_source_dir(namespace)
-    write_file(directory, name + '.cc', '''\
+    path = get_source_path(name, namespace, '.cc')
+    write_file(path, '''\
 {license}
 
 // Unit headers
 #include <{namespace}/{name}.hh>
 
+// Core headers
+#include <core/types.hh>
+
 // Utility headers
 #include <basic/Tracer.hh>
-#include <boost/foreach.hpp>
-#define foreach BOOST_FOREACH
 
 // Namespaces
 using namespace std;
@@ -274,16 +433,20 @@ using core::Real;
 {namespace_closer}
 '''.format(
         **get_common_fields(name, namespace)),
-    dry_run)
+    dry_run=dry_run)
 
 def write_mover_hh_file(name, parent=None, dry_run=False):
     name, namespace = get_fully_qualified_name(name)
-    directory = get_source_dir(namespace)
-    write_file(directory, name + '.hh', '''\
+    parent=parent or 'protocols::moves::Mover'
+    path = get_source_path(name, namespace, '.hh')
+    write_file(path, '''\
 {include_guard}
 
 // Unit headers
 #include <{namespace}/{name}.fwd.hh>
+
+// Protocol headers
+#include <{parent_hh}>
 
 // RosettaScripts headers
 #include <utility/tag/Tag.fwd.hh>
@@ -301,11 +464,20 @@ public:
 /// @brief Default constructor.
 {name}();
 
+/// @brief Copy constructor.
+{name}({name} const & other);
+
 /// @brief Default destructor.
 ~{name}();
 
 /// @copydoc {parent}::get_name
 std::string get_name() const {{ return "{name}"; }}
+
+/// @copydoc {parent}::fresh_instance
+protocols::moves::MoverOP fresh_instance() const;
+
+/// @copydoc {parent}::clone
+protocols::moves::MoverOP clone() const;
 
 /// @copydoc {parent}::parse_my_tag
 void parse_my_tag(
@@ -324,14 +496,15 @@ void apply(core::pose::Pose & pose);
 
 #endif
 '''.format(
-        parent=parent or 'protocols::moves::Mover',
+        parent=parent,
+        parent_hh='/'.join(parent.split('::')) + '.hh',
         **get_common_fields(name, namespace)),
-    dry_run)
+    dry_run=dry_run)
 
 def write_mover_cc_file(name, dry_run=False):
     name, namespace = get_fully_qualified_name(name)
-    directory = get_source_dir(namespace)
-    write_file(directory, name + '.cc', '''\
+    path = get_source_path(name, namespace, '.cc')
+    write_file(path, '''\
 {license}
 
 // Unit headers
@@ -346,48 +519,60 @@ def write_mover_cc_file(name, dry_run=False):
 
 // Utility headers
 #include <basic/Tracer.hh>
-#include <boost/foreach.hpp>
-#define foreach BOOST_FOREACH
 
 // Namespaces
 using namespace std;
 using core::Size;
 using core::Real;
+using protocols::moves::MoverOP;
 
 {namespace_opener}
 
 {tracer}
 
-protocols::moves::MoverOP {name}Creator::create_mover() const {{
-	return new {name};
+MoverOP {name}Creator::create_mover() const {{
+	return MoverOP( new {name} );
 }}
 
-std::string {name}Creator::keyname() const {{
+string {name}Creator::keyname() const {{
 	return "{name}";
 }}
 
 {name}::{name}() {{}}
 
-void {name}::parse_my_tag(
-		utility::tag::TagCOP tag,
-		basic::datacache::DataMap & data,
-		protocols::filters::Filters_map const & filters,
-		protocols::moves::Movers_map const & movers,
-		core::pose::Pose const & pose) {{
+{name}::{name}({name} const & /*other*/) {{}}
+
+{name}::~{name}() {{}}
+
+MoverOP {name}::fresh_instance() const {{
+	return MoverOP( new {name} );
 }}
 
-void {name}::apply(core::pose::Pose & pose) {{
+MoverOP {name}::clone() const {{
+	return MoverOP( new {name}( *this ) );
+}}
+
+void {name}::parse_my_tag(
+		utility::tag::TagCOP /*tag*/,
+		basic::datacache::DataMap & /*data*/,
+		protocols::filters::Filters_map const & /*filters*/,
+		protocols::moves::Movers_map const & /*movers*/,
+		core::pose::Pose const & /*pose*/) {{
+}}
+
+void {name}::apply(core::pose::Pose & /*pose*/) {{
+	tr << "Hello world!" << endl;
 }}
 
 {namespace_closer}
 '''.format(
         **get_common_fields(name, namespace)),
-    dry_run)
+    dry_run=dry_run)
 
 def write_mover_creator_file(name, dry_run=False):
     name, namespace = get_fully_qualified_name(name)
-    directory = get_source_dir(namespace)
-    write_file(directory, name + 'Creator.hh', '''\
+    path = get_source_path(name, namespace, 'Creator.hh')
+    write_file(path, '''\
 {include_guard}
 
 #include <protocols/moves/MoverCreator.hh>
@@ -405,12 +590,30 @@ public:
 #endif
 '''.format(
         **get_common_fields(name, namespace, 'CREATOR_HH')),
-    dry_run)
+    dry_run=dry_run)
+
+def write_mover_creator_ihh_line(name, dry_run=False):
+    name, namespace = get_fully_qualified_name(name)
+    path = os.path.join(
+            get_protocols_init_dir(), 'init.MoverCreators.ihh')
+    line = '#include <{namespace}/{name}Creator.hh>'.format(
+            **get_common_fields(name, namespace))
+    insert_line_into_file(path, line, dry_run=dry_run)
+
+def write_mover_registrator_ihh_line(name, dry_run=False):
+    name, namespace = get_fully_qualified_name(name)
+    path = os.path.join(
+        get_protocols_init_dir(), 'init.MoverRegistrators.ihh')
+    line = 'static MoverRegistrator< {namespace}::{creator} > reg_{creator};'.format(
+            namespace='::'.join(namespace[1:]),
+            creator=name + 'Creator',
+    )
+    insert_line_into_file(path, line, dry_run=dry_run)
 
 def write_cxxtest_hh_file(name, dry_run=False):
     name, namespace = get_fully_qualified_name(name)
-    directory = get_test_dir(namespace)
-    write_file(directory, name + '.cxxtest.hh', '''\
+    path = get_test_path(name, namespace, '.cxxtest.hh')
+    write_file(path, '''\
 {include_guard}
 
 // Test headers
@@ -439,30 +642,38 @@ public:
 #endif
 '''.format(
         **get_common_fields(name, namespace, 'CXXTEST_HH')),
-    dry_run)
+    dry_run=dry_run)
 
-    # Instruct the user to add the new file to the appropriate settings file.  
-    # This is hard to do programmatically, because the settings files are 
-    # python scripts.  To do it properly, I'd have to compile the python code 
-    # into an AST, modify it, then convert it back into source code.
+def write_src_settings_line(name, dry_run=False):
+    name, namespace = get_fully_qualified_name(name)
+    namespace_path = '/'.join(namespace)
+    settings_glob = os.path.join(
+            helpers.find_rosetta_installation(),
+            'source', 'src', namespace[0] + '*src.settings')
 
-    if not dry_run:
-        rel_settings_path = os.path.relpath(
-                os.path.join(
-                    helpers.find_rosetta_installation(),
-                    'source', 'test', namespace[0] + '.test.settings'),
-                os.getcwd())
+    # See if this namespace is already present in any of the relevant settings 
+    # files.  If so, update that file.
 
-        print()
-        print("Add the following entry to '{}':".format(rel_settings_path))
-        print()
-        print('''\
-        "{namespace}": [
-            "{name}",
-        ],
-'''.format(
-            name=name,
-            namespace='/'.join(namespace),
-        ))
+    for path in glob.glob(settings_glob):
+        with open(path) as file:
+            if namespace_path in file.read():
+                break
+
+    # If we can't automatically decide which settings file to update, ask the 
+    # user to make the decision.
+
+    else:
+        path = input("Which settings file to use: ")
+
+    # Update the chosen file.
+
+    insert_name_into_settings(path, name, namespace, dry_run)
+
+def write_test_settings_line(name, dry_run=False):
+    name, namespace = get_fully_qualified_name(name)
+    path = os.path.join(
+            helpers.find_rosetta_installation(),
+            'source', 'test', namespace[0] + '.test.settings')
+    insert_name_into_settings(path, name + 'Test', namespace[1:], dry_run)
 
 

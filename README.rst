@@ -39,12 +39,12 @@ convenient.  For example, put these lines in ``~/.bashrc``::
    alias ru='rdt_unit_test'
    alias rd='rdt_doxygen'
 
-If you want to install these tools on the QB3 cluster, you'll have to take a 
-couple extra steps.  First, you have to be on an interactive node (e.g.  
-``iqint``) or git clone won't work.  Second, the cluster doesn't have ``pip`` 
-installed, so you'll have to clone this repository and  run ``setup.py`` 
-manually.  Third, the cluster doesn't make ``python3`` available by default, so 
-you have to explicitly enable it using the ``scl enable python33`` command::
+If you want to install these tools on the QB3 cluster, you have to take a 
+couple extra steps.  First, the cluster doesn't have ``pip`` installed, so you 
+have to clone this repository and run ``setup.py`` manually.  Second, you have 
+to be on an interactive node (e.g.  ``iqint``) or git clone won't work.  Third, 
+the cluster doesn't make ``python3`` available by default, so you have to 
+explicitly enable it using the ``scl enable python33`` command::
 
    $ ssh iqint
    $ git clone git@github.com:Kortemme-Lab/rosetta_dev_tools.git

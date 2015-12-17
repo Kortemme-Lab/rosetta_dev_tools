@@ -21,7 +21,8 @@ Arguments:
             Create *.fwd.hh, *.hh, and *.cc files for a class with the given 
             name and namespace.
         
-        fwd.hh; hh; cc; mover.hh; mover.cc; creator.hh; cxxtest.hh:
+        fwd.hh; hh; cc; mover.hh; mover.cc; creator.hh; creator.ihh; 
+        registrator.ihh; src.settings; test.settings; cxxtest.hh
             Create a file with the given extension for a class with the given 
             name and namespace.
 

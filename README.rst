@@ -21,12 +21,12 @@ properly, but information is available on the Kortemme lab wiki page.
 
 Installation
 ============
-You can install these tools by cloning this repository and running ``pip``.  
-Note that these tools depend on ``python3``, so the installation won't work if 
-you use a ``pip`` associated with ``python2``::
+These tools are available from PyPI, so you can install them using ``pip``.  Be 
+sure to use the ``pip`` associated with ``python3`` though, because by default 
+``pip`` is usually associated with ``python2`` and will not work with these 
+tools::
 
-   $ git clone git@github.com:Kortemme-Lab/rosetta_dev_tools.git
-   $ pip3 install ./rosetta_dev_tools
+   $ pip3 install rosetta_dev_tools
 
 This will install a handful of executable scripts in whichever ``bin/`` 
 directory ``pip`` is configured to use.  These scripts have pretty long names, 
@@ -42,9 +42,9 @@ convenient.  For example, put these lines in ``~/.bashrc``::
 If you want to install these tools on the QB3 cluster, you'll have to take a 
 couple extra steps.  First, you have to be on an interactive node (e.g.  
 ``iqint``) or git clone won't work.  Second, the cluster doesn't have ``pip`` 
-installed, so you'll have to run ``setup.py`` manually.  Third, the cluster 
-doesn't make ``python3`` available by default, so you have to explicitly enable 
-it using the ``scl enable python33`` command::
+installed, so you'll have to clone this repository and  run ``setup.py`` 
+manually.  Third, the cluster doesn't make ``python3`` available by default, so 
+you have to explicitly enable it using the ``scl enable python33`` command::
 
    $ ssh iqint
    $ git clone git@github.com:Kortemme-Lab/rosetta_dev_tools.git

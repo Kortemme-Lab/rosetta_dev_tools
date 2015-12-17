@@ -99,7 +99,7 @@ To build in release mode, run the following alias instead::
 
    $ rr
 
-These aliases require that either ```ninja`` or ``make`` be installed.  Most 
+These aliases require that either ``ninja`` or ``make`` be installed.  Most 
 systems will have ``make`` installed by default, so you shouldn't have to worry 
 about this.  However, ``ninja`` is preferred if both build tools are installed 
 because it's faster and more succinct.
